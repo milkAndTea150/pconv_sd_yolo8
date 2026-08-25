@@ -651,6 +651,8 @@ def check_amp(model):
         LOGGER.info(f"{prefix}checks passed ✅")
     except ConnectionError:
         LOGGER.warning(f"{prefix}checks skipped ⚠️, offline and unable to download YOLOv8n. {warning_msg}")
+    except FileNotFoundError:
+        LOGGER.warning(f"{prefix}checks skipped ⚠️, validation image is not packaged. {warning_msg}")
     except (AttributeError, ModuleNotFoundError):
         LOGGER.warning(
             f"{prefix}checks skipped ⚠️. "

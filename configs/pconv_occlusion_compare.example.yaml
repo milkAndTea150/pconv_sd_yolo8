@@ -1,0 +1,53 @@
+project_root: .
+output_root: runs/pconv_occlusion_compare
+
+datasets:
+  clean_yaml: datasets/my_ir.yaml
+  occluded_yaml: datasets/my_ir_occluded.yaml
+  occluded_only_images: /absolute/path/to/IR_Mix_Occluded/infrared_true_Occluded/images/test
+  generated_list: runs/pconv_occlusion_compare/generated/occluded_test_only.txt
+  generated_yaml: runs/pconv_occlusion_compare/generated/my_ir_occluded_test_only.yaml
+  expected_counts:
+    train: 12267
+    val: 1364
+    test: 1515
+    occluded_only_test: 454
+
+models:
+  pconv_sdiou:
+    model: models/yolov8n-p2p-pconv.yaml
+    expected_pconv: 2
+    train_device: 0
+
+train:
+  imgsz: 640
+  batch: 64
+  workers: 8
+  amp: true
+  optimizer: SGD
+  lrf: 0.01
+  weight_decay: 0.0005
+  momentum: 0.9
+  warmup_epochs: 3
+  close_mosaic: 10
+  seed: 0
+  deterministic: true
+  cache: false
+  patience: 0
+  base_epochs: 100
+  base_lr0: 0.01
+  finetune_epochs: 50
+  finetune_lr0: 0.001
+  sdiou_delta: 0.5
+
+evaluation:
+  device: 0
+  imgsz: 640
+  batch: 1
+  workers: 0
+  half: false
+  repeats: 3
+  warmup_iterations: 20
+  confidence: 0.25
+  iou: 0.5
+  max_det: 300

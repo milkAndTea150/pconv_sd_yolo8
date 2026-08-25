@@ -198,7 +198,68 @@ python scripts/eval_repro.py \
 
 评测结果写入 `runs/repro_compare/eval/<name>/metrics.json`，包括 Precision、Recall、mAP50、mAP50-95、PConv 层数、耗时和权重 SHA256。
 
-## 5. 代码修改位置
+## 5. 遮挡数据集两阶段对照实验
+
+本分支额外提供 `scripts/run_pconv_occlusion_compare.py`，用于执行：
+
+1. PConv + SDIoU 在无合成遮挡的原始训练集上训练100轮；
+2. 分别在原始test、完整混合遮挡test和纯遮挡test子集上评测；
+3. 从第一阶段 `best.pt` 初始化，在遮挡train上继续训练50轮，并使用遮挡val选择权重；
+4. 在相同的三个测试范围上复测并汇总变化。
+
+准备两份本地数据配置：
+
+```bash
+cp datasets/my_ir.example.yaml datasets/my_ir.yaml
+cp datasets/my_ir_occluded.example.yaml datasets/my_ir_occluded.yaml
+cp configs/pconv_occlusion_compare.example.yaml \
+   configs/pconv_occlusion_compare.local.yaml
+```
+
+必须修改以下路径：
+
+- `datasets/my_ir.yaml` 的 `path`：原始、无合成遮挡的数据根目录；
+- `datasets/my_ir_occluded.yaml` 的 `path`：完整遮挡数据根目录；
+- `occluded_only_images`：只包含实际遮挡图像文件名的子集目录；
+- 如不从仓库根目录运行，还需把配置中的 `project_root` 和相关相对路径改为绝对路径。
+
+完整遮挡数据仍应包含标准的 `images/{train,val,test}` 和 `labels/{train,val,test}`。纯遮挡目录只用于筛选完整遮挡test中的文件名；程序会生成指向完整遮挡图像的测试清单，从而继续使用对应的YOLO标签。
+
+分阶段运行：
+
+```bash
+python scripts/run_pconv_occlusion_compare.py prepare \
+  --config configs/pconv_occlusion_compare.local.yaml
+
+python scripts/run_pconv_occlusion_compare.py smoke \
+  --config configs/pconv_occlusion_compare.local.yaml
+
+python scripts/run_pconv_occlusion_compare.py train-base \
+  --config configs/pconv_occlusion_compare.local.yaml
+
+python scripts/run_pconv_occlusion_compare.py eval-base \
+  --config configs/pconv_occlusion_compare.local.yaml
+
+python scripts/run_pconv_occlusion_compare.py finetune \
+  --config configs/pconv_occlusion_compare.local.yaml
+
+python scripts/run_pconv_occlusion_compare.py eval-final \
+  --config configs/pconv_occlusion_compare.local.yaml
+```
+
+也可以使用 `all` 顺序执行所有阶段。已完成阶段会根据结果和检查点跳过，中断训练可从 `last.pt` 恢复。
+
+评测统一使用 batch=1、FP32、关闭测试增强，预热后重复三次并报告中位数。主要输出为 mAP50、推理FPS、端到端FPS和FA/image；其中FA/image是在置信度0.25、匹配IoU 0.5条件下，未与同类别真实框匹配的预测框数量除以图像数。结果保存在：
+
+```text
+runs/pconv_occlusion_compare/summary.csv
+runs/pconv_occlusion_compare/summary.json
+runs/pconv_occlusion_compare/summary.md
+```
+
+`configs/*.local.yaml`、`datasets/my_ir*.yaml`、`runs/`、数据、权重和日志均不会提交到Git。
+
+## 6. 代码修改位置
 
 | 功能 | 文件与位置 |
 |---|---|
@@ -215,7 +276,7 @@ python scripts/eval_repro.py \
 
 训练入口会检查模型结构：baseline 必须包含 0 个 PConv 层，PConv+SDIoU 模型必须包含 2 个 PConv 层。`bbox_loss` 由入口分别设为 `ciou` 和 `sdiou`，避免只修改模型名称但没有真正启用对应模块。
 
-## 6. 一轮训练验证结果
+## 7. 一轮训练验证结果
 
 以下结果用于验证数据、模型、损失、反向传播和测试链路能够完整运行，不代表正式收敛性能：
 
@@ -226,7 +287,7 @@ python scripts/eval_repro.py \
 
 正式对比应完成相同轮数训练，并使用各自在验证集上选出的 `best.pt` 在同一 test 集上评测。当前两组实验比较的是 PConv 与 SDIoU 的联合效果；若要区分各模块贡献，应补充 `baseline + SDIoU` 和 `PConv + CIoU` 两组消融实验。
 
-## 7. 参考
+## 8. 参考
 
 PConv 与尺度动态损失参考：Yang et al., *Pinwheel-shaped Convolution and Scale-based Dynamic Loss for Infrared Small Target Detection*, AAAI 2025。
 

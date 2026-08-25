@@ -1,0 +1,17 @@
+# Copy to datasets/my_ir_occluded.yaml and replace path with the local occluded dataset root.
+path: /absolute/path/to/IR_Mix_Occluded/infrared_true
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: Cars
+  1: People
+  2: helicopter
+  3: jeep
+  4: truck
+  5: speedboat
+  6: fighter
+  7: tank
+  8: pickup
+  9: freighter light

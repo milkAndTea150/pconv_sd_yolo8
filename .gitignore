@@ -141,6 +141,7 @@ runs/
 logs/
 datasets/*.yaml
 !datasets/*.example.yaml
+configs/*.local.yaml
 wandb/
 tests/
 .DS_Store
