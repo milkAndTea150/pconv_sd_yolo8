@@ -264,7 +264,12 @@ def last_epoch(results_csv: Path) -> int:
         rows = list(csv.DictReader(handle))
     if not rows:
         return 0
-    return int(float(rows[-1]["epoch"]))
+    # Ultralytics 8.1 right-aligns CSV headers with leading spaces, so normalize
+    # field names before looking up the completed epoch.
+    last_row = {str(key).strip(): value for key, value in rows[-1].items() if key is not None}
+    if "epoch" not in last_row:
+        raise ValueError(f"results.csv has no epoch column: {results_csv}")
+    return int(float(last_row["epoch"]))
 
 
 def train_run(
